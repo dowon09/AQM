@@ -1,0 +1,34 @@
+services:
+  backend:
+    build: ./aqm-backend
+    container_name: aqm-api
+    environment:
+      DATABASE_URL: sqlite:////data/readings.db
+      DEVICE_API_KEY: ${DEVICE_API_KEY:?Set DEVICE_API_KEY in .env}
+      CORS_ORIGINS: http://localhost:5174,http://127.0.0.1:5174
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./aqm-frontend
+      args:
+        VITE_API_URL: /api
+    container_name: aqm-dashboard
+    ports:
+      - "5174:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
