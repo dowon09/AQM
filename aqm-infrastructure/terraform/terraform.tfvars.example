@@ -1,0 +1,3 @@
+# Copy this file to terraform.tfvars and replace with your real public IP.
+# Keep terraform.tfvars out of git.
+ssh_cidr = "94.134.178.19/32"
