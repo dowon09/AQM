@@ -48,7 +48,8 @@ function aqiStatus(value: number | null) {
   if (value == 2) return { label: "Good", tone: "good" };
   if (value == 3) return { label: "Moderate", tone: "sensitive" };
   if (value == 4) return { label: "Poor", tone: "unhealthy" };
-  return { label: "Unhealthy", tone: "very-unhealthy" };
+  if (value == 5) return { label: "Very Poor", tone: "very-unhealthy" };
+  return { label: "No reading", tone: "neutral" };
 }
 
 function formatTimestamp(timestamp: string) {
@@ -175,6 +176,7 @@ export default function App() {
   const isLive = lastSeenMs !== null && lastSeenMs < 300_000;
   const chartData = readings.map((reading) => ({
     ...reading,
+    chartAqi: reading.aqi === null ? null : 6 - reading.aqi,
     chartTime: parseTimestamp(reading.timestamp).getTime(),
   }));
   const selectedMetricConfig = chartMetrics.find((metric) => metric.key === selectedMetric) ?? chartMetrics[0];
@@ -279,7 +281,7 @@ export default function App() {
                   />
                   <YAxis
                     domain={selectedMetric === "aqi" ? [1, 5] : [0, "auto"]}
-                    reversed={selectedMetric === "aqi"}
+                    tickFormatter={(value) => selectedMetric === "aqi" ? 6 - Number(value) : value}
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: "#8b958d", fontSize: 11 }}
@@ -289,18 +291,19 @@ export default function App() {
                     labelFormatter={(time) => formatTimestamp(new Date(Number(time)).toISOString())}
                     formatter={(value) => {
                       if (selectedMetric === "aqi") {
-                        const aqiValue = value == null ? null : Number(value);
-                        const label = aqiStatus(aqiValue).label;
-                        return [`${value ?? "--"} (${label})`, selectedMetricConfig.label];
+                        const label = value == null ? "" : aqiStatus(6 - Number(value)).label;
+                        return [`${label}`];
                       }
-                      return [`${value ?? "--"} ${selectedMetricConfig.unit}`.trim(), selectedMetricConfig.label];
+                      const digits = selectedMetric === "temperature" || selectedMetric === "humidity" ? 1 : 0;
+                      const formattedValue = value == null ? "--" : Number(value).toFixed(digits);
+                      return [`${formattedValue} ${selectedMetricConfig.unit}`.trim(), selectedMetricConfig.label];
                     }}
                     contentStyle={{ border: "1px solid #e4e9e3", borderRadius: 8, fontSize: 12 }}
                   />
                   <Area
                     type="monotone"
-                    dataKey={selectedMetric}
-                    baseLine={selectedMetric === "aqi" ? 5 : undefined}
+                    dataKey={selectedMetric === "aqi" ? "chartAqi" : selectedMetric}
+                    baseValue={selectedMetric === "aqi" ? 1 : "dataMin"}
                     stroke="#28795f"
                     strokeWidth={2.5}
                     fill="url(#metricFill)"
