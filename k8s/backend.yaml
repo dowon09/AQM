@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aqm-backend
+  namespace: aqm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aqm-backend
+  template:
+    metadata:
+      labels:
+        app: aqm-backend
+    spec:
+      imagePullSecrets:
+        - name: ecr-secret
+      containers:
+        - name: backend
+          image: 454005357524.dkr.ecr.eu-north-1.amazonaws.com/aqm-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: sqlite:////data/readings.db
+            - name: DEVICE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aqm-secrets
+                  key: DEVICE_API_KEY
+          volumeMounts:
+            - name: database-storage
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: database-storage
+          persistentVolumeClaim:
+            claimName: aqm-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aqm-backend
+  namespace: aqm
+spec:
+  selector:
+    app: aqm-backend
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP
