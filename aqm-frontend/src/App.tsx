@@ -278,7 +278,8 @@ export default function App() {
                     minTickGap={36}
                   />
                   <YAxis
-                    domain={[0, "auto"]}
+                    domain={selectedMetric === "aqi" ? [1, 5] : [0, "auto"]}
+                    reversed={selectedMetric === "aqi"}
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: "#8b958d", fontSize: 11 }}
@@ -286,12 +287,20 @@ export default function App() {
                   />
                   <Tooltip
                     labelFormatter={(time) => formatTimestamp(new Date(Number(time)).toISOString())}
-                    formatter={(value) => [`${value ?? "--"} ${selectedMetricConfig.unit}`.trim(), selectedMetricConfig.label]}
+                    formatter={(value) => {
+                      if (selectedMetric === "aqi") {
+                        const aqiValue = value == null ? null : Number(value);
+                        const label = aqiStatus(aqiValue).label;
+                        return [`${value ?? "--"} (${label})`, selectedMetricConfig.label];
+                      }
+                      return [`${value ?? "--"} ${selectedMetricConfig.unit}`.trim(), selectedMetricConfig.label];
+                    }}
                     contentStyle={{ border: "1px solid #e4e9e3", borderRadius: 8, fontSize: 12 }}
                   />
                   <Area
                     type="monotone"
                     dataKey={selectedMetric}
+                    baseLine={selectedMetric === "aqi" ? 5 : undefined}
                     stroke="#28795f"
                     strokeWidth={2.5}
                     fill="url(#metricFill)"
