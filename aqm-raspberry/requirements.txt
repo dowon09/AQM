@@ -1,0 +1,3 @@
+requests>=2.31,<3
+sparkfun-qwiic-bme280>=2,<3
+sparkfun-qwiic-ens160>=2,<3
