@@ -16,4 +16,14 @@ set +a
 : "${API_URL:?Set API_URL in aqm-raspberry/.env}"
 : "${DEVICE_API_KEY:?Set DEVICE_API_KEY in aqm-raspberry/.env}"
 
-exec python3 "$SCRIPT_DIR/run.py"
+VENV="$SCRIPT_DIR/venv"
+
+if [ ! -x "$VENV/bin/python" ]; then
+    printf 'Creating isolated Python environment...\n'
+    python3 -m venv "$VENV"
+fi
+
+printf 'Checking Python dependencies...\n'
+"$VENV/bin/python" -m pip install -r "$SCRIPT_DIR/requirements.txt"
+
+exec "$VENV/bin/python" "$SCRIPT_DIR/run.py"
