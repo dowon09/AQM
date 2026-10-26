@@ -50,7 +50,7 @@ def get_latest_reading(db: Session = Depends(get_db)):
 @router.get("/readings", response_model=list[ReadingResponse])
 def get_readings(
     days: int = Query(default=1, ge=1, le=30),
-    limit: int = Query(default=1000, ge=1, le=10000),
+    limit: int = Query(default=1440, ge=1, le=43200),
     db: Session = Depends(get_db),
 ):
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
