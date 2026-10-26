@@ -153,6 +153,67 @@ resource "aws_iam_instance_profile" "aqm_host" {
   role = aws_iam_role.aqm_host.name
 }
 
+resource "aws_iam_user" "github_cicd" {
+  name = "aqm-github-cicd"
+
+  tags = {
+    Project     = "AQM"
+    Environment = "production"
+    Purpose     = "GitHub Actions CI/CD"
+  }
+}
+
+resource "aws_iam_user_policy" "github_cicd" {
+  name = "aqm-github-cicd-policy"
+  user = aws_iam_user.github_cicd.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "ECRLogin"
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Sid    = "PushAQMImages"
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:CompleteLayerUpload",
+          "ecr:InitiateLayerUpload",
+          "ecr:PutImage",
+          "ecr:UploadLayerPart",
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer"
+        ]
+        Resource = [
+          "arn:aws:ecr:eu-north-1:454005357524:repository/aqm-backend",
+          "arn:aws:ecr:eu-north-1:454005357524:repository/aqm-frontend"
+        ]
+      },
+      {
+        Sid    = "DeployThroughSSM"
+        Effect = "Allow"
+        Action = [
+          "ssm:SendCommand"
+        ]
+        Resource = [
+          "arn:aws:ec2:eu-north-1:454005357524:instance/i-07933d362507f8a51",
+          "arn:aws:ssm:eu-north-1::document/AWS-RunShellScript"
+        ]
+      },
+      {
+        Sid      = "CheckDeploymentCommand"
+        Effect   = "Allow"
+        Action   = ["ssm:GetCommandInvocation"]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # Persistent, encrypted application data volume.
 resource "aws_ebs_volume" "aqm_data" {
   availability_zone = aws_subnet.aqm_public.availability_zone
