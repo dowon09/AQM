@@ -29,9 +29,9 @@ interface Reading {
 
 const API_ROOT = (import.meta.env.VITE_API_URL || "http://localhost:8000/api").replace(/\/$/, "");
 const ranges = [
-  { label: "24 hours", days: 1 },
-  { label: "7 days", days: 7 },
-  { label: "30 days", days: 30 },
+  { label: "1 hr", hours: 1 },
+  { label: "24 hr", hours: 24 },
+  { label: "7 days", hours: 168 },
 ] as const;
 const chartMetrics = [
   { key: "aqi", label: "AQI", unit: "" },
@@ -106,13 +106,11 @@ function MetricCard({
 export default function App() {
   const [latest, setLatest] = useState<Reading | null>(null);
   const [readings, setReadings] = useState<Reading[]>([]);
-  const [days, setDays] = useState<number>(1);
+  const [hours, setHours] = useState<number>(1);
   const [selectedMetric, setSelectedMetric] = useState<ChartMetric>("tvoc");
   const [historyError, setHistoryError] = useState("");
   const [latestError, setLatestError] = useState("");
   const latestRef = useRef<Reading | null>(null);
-  const daysRef = useRef(days);
-  daysRef.current = days;
   const error = latestError || historyError;
 
   useEffect(() => {
@@ -120,7 +118,7 @@ export default function App() {
 
     async function loadHistory() {
       try {
-        const response = await fetch(`${API_ROOT}/readings?days=${days}`);
+        const response = await fetch(`${API_ROOT}/readings?hours=${hours}`);
         if (!response.ok) {
           throw new Error("The readings service could not be reached.");
         }
@@ -138,7 +136,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [days]);
+  }, [hours]);
 
   useEffect(() => {
     let cancelled = false;
@@ -178,7 +176,7 @@ export default function App() {
     ...reading,
     chartAqi: reading.aqi === null ? null : 6 - reading.aqi,
     chartTime: parseTimestamp(reading.timestamp).getTime(),
-  }));
+  })).filter((reading) => reading.chartTime >= Date.now() - hours * 60 * 60 * 1000);
   const selectedMetricConfig = chartMetrics.find((metric) => metric.key === selectedMetric) ?? chartMetrics[0];
   const metricChartData = chartData.filter((reading) => reading[selectedMetric] !== null);
 
@@ -199,7 +197,7 @@ export default function App() {
             <div className="aqi-topline">
               <div className="panel-kicker"><Activity size={15} /> AIR QUALITY INDEX</div>
               <span className={`connection ${isLive ? "connected" : "disconnected"}`}>
-                <span />{latest ? (isLive ? "Live" : "Quiet") : "Sensor not connected"}
+                <span />{latest ? (isLive ? "Live" : "Not Connected") : "Sensor not connected"}
               </span>
             </div>
             <div className="aqi-main">
@@ -245,10 +243,10 @@ export default function App() {
                 {ranges.map((range) => (
                   <button
                     type="button"
-                    key={range.days}
-                    className={days === range.days ? "selected" : ""}
-                    onClick={() => setDays(range.days)}
-                    aria-pressed={days === range.days}
+                      key={range.hours}
+                    className={hours === range.hours ? "selected" : ""}
+                    onClick={() => setHours(range.hours)}
+                    aria-pressed={hours === range.hours}
                   >
                     {range.label}
                   </button>
@@ -271,7 +269,7 @@ export default function App() {
                     dataKey="chartTime"
                     type="number"
                     domain={["dataMin", "dataMax"]}
-                    tickFormatter={(time: number) => new Intl.DateTimeFormat(undefined, days === 1
+                    tickFormatter={(time: number) => new Intl.DateTimeFormat(undefined, hours <= 24
                       ? { hour: "numeric" }
                       : { month: "short", day: "numeric" }).format(new Date(time))}
                     axisLine={false}

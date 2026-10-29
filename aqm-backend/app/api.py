@@ -12,6 +12,7 @@ from app.models import Reading
 from app.schemas import ReadingCreate, ReadingResponse
 
 router = APIRouter(prefix="/api")
+MAX_HISTORY_READINGS = 12_000
 
 
 @router.get("/health")
@@ -49,15 +50,14 @@ def get_latest_reading(db: Session = Depends(get_db)):
 
 @router.get("/readings", response_model=list[ReadingResponse])
 def get_readings(
-    days: int = Query(default=1, ge=1, le=30),
-    limit: int = Query(default=1440, ge=1, le=43200),
+    hours: int = Query(default=24, ge=1, le=168),
     db: Session = Depends(get_db),
 ):
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
     statement = (
         select(Reading)
         .where(Reading.timestamp >= cutoff)
-        .order_by(Reading.timestamp.asc(), Reading.id.asc())
-        .limit(limit)
+        .order_by(Reading.timestamp.desc(), Reading.id.desc())
+        .limit(MAX_HISTORY_READINGS)
     )
-    return list(db.scalars(statement).all())
+    return list(reversed(db.scalars(statement).all()))
