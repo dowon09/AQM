@@ -3,6 +3,7 @@ import {
   Activity,
   Cloud,
   Droplets,
+  Info,
   Thermometer,
   Wind,
   type LucideIcon,
@@ -19,11 +20,11 @@ import {
 
 interface Reading {
   id: number;
+  temperature: number | null;
+  humidity: number | null;
   aqi: number | null;
   tvoc: number | null;
   eco2: number | null;
-  temperature: number | null;
-  humidity: number | null;
   timestamp: string;
 }
 
@@ -34,11 +35,11 @@ const ranges = [
   { label: "7 days", hours: 168 },
 ] as const;
 const chartMetrics = [
+  { key: "temperature", label: "Temperature", unit: "°C" },
+  { key: "humidity", label: "Humidity", unit: "%" },
   { key: "aqi", label: "AQI", unit: "" },
   { key: "tvoc", label: "TVOC", unit: "ppb" },
   { key: "eco2", label: "eCO₂", unit: "ppm" },
-  { key: "temperature", label: "Temperature", unit: "°C" },
-  { key: "humidity", label: "Humidity", unit: "%" },
 ] as const;
 type ChartMetric = typeof chartMetrics[number]["key"];
 
@@ -82,18 +83,33 @@ function MetricCard({
   value,
   unit,
   tone,
+  description,
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
   unit: string;
   tone: string;
+  description?: string;
 }) {
   return (
     <article className={`metric-card ${tone}`}>
       <div className="metric-heading">
         <span className="metric-icon"><Icon size={17} strokeWidth={1.8} /></span>
         <span>{label}</span>
+        {description && (
+          <button
+            className="metric-info"
+            type="button"
+            aria-label={`About ${label}`}
+            aria-describedby={`metric-info-${label}`}
+          >
+            <Info size={14} strokeWidth={1.8} aria-hidden="true" />
+            <span className="metric-tooltip" id={`metric-info-${label}`} role="tooltip">
+              {description}
+            </span>
+          </button>
+        )}
       </div>
       <div className="metric-reading">
         <strong>{value}</strong>
@@ -107,7 +123,7 @@ export default function App() {
   const [latest, setLatest] = useState<Reading | null>(null);
   const [readings, setReadings] = useState<Reading[]>([]);
   const [hours, setHours] = useState<number>(1);
-  const [selectedMetric, setSelectedMetric] = useState<ChartMetric>("tvoc");
+  const [selectedMetric, setSelectedMetric] = useState<ChartMetric>("temperature");
   const [historyError, setHistoryError] = useState("");
   const [latestError, setLatestError] = useState("");
   const latestRef = useRef<Reading | null>(null);
@@ -214,8 +230,8 @@ export default function App() {
           <div className="metrics-grid">
             <MetricCard icon={Thermometer} label="Temperature" value={latest?.temperature == null ? "--" : latest.temperature.toFixed(1)} unit="°C" tone="coral" />
             <MetricCard icon={Droplets} label="Humidity" value={latest?.humidity == null ? "--" : latest.humidity.toFixed(0)} unit="%" tone="gold" />
-            <MetricCard icon={Cloud} label="TVOC" value={latest?.tvoc == null ? "--" : latest.tvoc.toFixed(0)} unit="ppb" tone="mint" />
-            <MetricCard icon={Wind} label="eCO₂" value={latest?.eco2 == null ? "--" : latest.eco2.toFixed(0)} unit="ppm" tone="blue" />
+            <MetricCard icon={Cloud} label="TVOC" value={latest?.tvoc == null ? "--" : latest.tvoc.toFixed(0)} unit="ppb" tone="mint" description="Lower is generally better. Below about 500 ppb is often considered low; higher readings mean more airborne chemicals. There is no single safe cutoff." />
+            <MetricCard icon={Wind} label="eCO₂" value={latest?.eco2 == null ? "--" : latest.eco2.toFixed(0)} unit="ppm" tone="blue" description="Lower is generally better. Around 400–1,000 ppm is a common reference range; above 1,000 is elevated. This is an estimate, not a direct CO₂ reading." />
           </div>
         </section>
 
